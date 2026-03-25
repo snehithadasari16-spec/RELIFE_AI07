@@ -99,6 +99,7 @@
   let userLocation = null;
   let currentChatRoom = null;
   let unsubscribeMessages = null;
+  let unsubscribeDonation = null;
 
   function showToast(message) {
     const toast = document.getElementById('toast');
@@ -260,18 +261,53 @@
     });
   }
 
+  // Updated openChat with real-time donation listener
   async function openChat(chatId, otherName, otherId, itemName, donationId) {
     currentChatRoom = { chatId, otherName, otherId, itemName, donationId };
-    // Fetch donation details to know status
-    const donationDoc = await getDoc(doc(db, "donations", donationId));
-    const donation = donationDoc.exists() ? donationDoc.data() : null;
-    const status = donation?.status || "unknown";
 
+    // Setup donation listener to update QR button area
+    if (unsubscribeDonation) unsubscribeDonation();
+    const donationRef = doc(db, "donations", donationId);
+    unsubscribeDonation = onSnapshot(donationRef, (docSnap) => {
+      const donation = docSnap.data();
+      if (!donation) return;
+      const status = donation.status;
+      const qrButtonArea = document.getElementById('qrButtonArea');
+      if (!qrButtonArea) return;
+
+      // Determine role: currentUser vs otherId
+      const isDonor = currentUser.uid === donation.userId;
+      const isReceiver = currentUser.uid === donation.requestedBy;
+
+      if (isReceiver) {
+        if (status === 'approved') {
+          qrButtonArea.innerHTML = `<button id="showQrBtn" class="btn btn-primary" style="margin:0; background:#4ECDC4;">Show QR Code for Pickup</button>`;
+          document.getElementById('showQrBtn')?.addEventListener('click', () => showQrModal(donationId));
+        } else if (status === 'delivered') {
+          qrButtonArea.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">✅ Item has been delivered</div>`;
+        } else {
+          qrButtonArea.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Waiting for donor to approve your request...</div>`;
+        }
+      } else if (isDonor) {
+        if (status === 'approved') {
+          qrButtonArea.innerHTML = `<button id="scanQrBtn" class="btn btn-primary" style="margin:0;">Scan Receiver's QR Code</button>`;
+          document.getElementById('scanQrBtn')?.addEventListener('click', () => showScanModal(donationId));
+        } else if (status === 'delivered') {
+          qrButtonArea.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Item has been delivered</div>`;
+        } else {
+          qrButtonArea.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Awaiting receiver's request or action</div>`;
+        }
+      }
+    });
+
+    // Setup header
     document.getElementById('appHeader').innerHTML = `
       <button class="back-button" onclick="location.reload()">←</button>
       <h1 style="font-size: 1.2rem;"><i class="fas fa-comments"></i> Chat with ${escapeHtml(otherName)}</h1>
-      <div class="subtitle">About: ${escapeHtml(itemName)} (${status})</div>
+      <div class="subtitle">About: ${escapeHtml(itemName)}</div>
     `;
+
+    // Chat UI
     const content = document.getElementById('contentArea');
     content.innerHTML = `
       <div class="chat-container">
@@ -282,36 +318,18 @@
         </div>
       </div>
     `;
-    // Add QR buttons if status is appropriate
+    // Insert QR button area
     const chatArea = document.querySelector('.chat-container');
-    const qrButtonsDiv = document.createElement('div');
-    qrButtonsDiv.style.display = 'flex';
-    qrButtonsDiv.style.gap = '8px';
-    qrButtonsDiv.style.padding = '8px 16px';
-    qrButtonsDiv.style.backgroundColor = '#f9fafb';
-    qrButtonsDiv.style.borderRadius = '12px';
-    qrButtonsDiv.style.margin = '8px';
-
-    if (currentUser?.uid !== otherId) {
-      // This is the receiver
-      if (status === 'approved') {
-        qrButtonsDiv.innerHTML = `<button id="showQrBtn" class="btn btn-primary" style="margin:0; background:#4ECDC4;">Show QR Code for Pickup</button>`;
-      } else if (status === 'delivered') {
-        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">✅ Item has been delivered</div>`;
-      } else {
-        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Waiting for donor to approve your request...</div>`;
-      }
-    } else {
-      // This is the donor
-      if (status === 'approved') {
-        qrButtonsDiv.innerHTML = `<button id="scanQrBtn" class="btn btn-primary" style="margin:0;">Scan Receiver's QR Code</button>`;
-      } else if (status === 'delivered') {
-        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Item has been delivered</div>`;
-      } else {
-        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Awaiting receiver's request or action</div>`;
-      }
-    }
-    chatArea.prepend(qrButtonsDiv);
+    const qrDiv = document.createElement('div');
+    qrDiv.id = 'qrButtonArea';
+    qrDiv.style.display = 'flex';
+    qrDiv.style.gap = '8px';
+    qrDiv.style.padding = '8px 16px';
+    qrDiv.style.backgroundColor = '#f9fafb';
+    qrDiv.style.borderRadius = '12px';
+    qrDiv.style.margin = '8px';
+    qrDiv.style.justifyContent = 'center';
+    chatArea.prepend(qrDiv);
 
     loadMessages(chatId);
     document.getElementById('sendMessageBtn').addEventListener('click', async () => {
@@ -322,13 +340,6 @@
     document.getElementById('messageInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') document.getElementById('sendMessageBtn').click();
     });
-
-    if (document.getElementById('showQrBtn')) {
-      document.getElementById('showQrBtn').addEventListener('click', () => showQrModal(donationId));
-    }
-    if (document.getElementById('scanQrBtn')) {
-      document.getElementById('scanQrBtn').addEventListener('click', () => showScanModal(donationId));
-    }
   }
 
   async function showQrModal(donationId) {
@@ -448,24 +459,20 @@
   async function approveRequest(donationId, requesterId, requesterName, itemName) {
     if (!currentUser) { showToast("Please login first"); return; }
     try {
-      // Generate a unique token for QR
       const token = Math.random().toString(36).substring(2, 15);
       await updateDoc(doc(db, "donations", donationId), {
         status: "approved",
         qrToken: token,
         approvedAt: serverTimestamp()
       });
-      // Get or create chat room
       const chatId = await getOrCreateChatRoom(requesterId, requesterName, donationId, itemName);
       await sendMessage(chatId, `Your request has been approved! You can now view the QR code in our chat.`);
       showToast(`✓ Request approved! Receiver can now see the QR code.`);
-      location.reload(); // Refresh to update UI
+      // No need to reload; the chat listener will update automatically
     } catch(err) { showToast("Error: " + err.message); }
   }
 
   async function respondToRequest(requestId, requesterId, requesterName, itemName) {
-    // This is for donors responding to a request (not yet a donation)
-    // Not used in this flow but kept for completeness
     if (!currentUser) { showToast("Please login first"); return; }
     if (currentUser.uid === requesterId) { showToast("You cannot respond to your own request"); return; }
     try {
@@ -491,7 +498,6 @@
     const isDonor = !userDonationsSnap.empty;
     if (isDonor) {
       document.getElementById('donorRequestsSection').style.display = 'block';
-      // Show requested items (status = "requested") that belong to donor
       const donorRequestsQuery = query(collection(db, "donations"), where("userId", "==", currentUser.uid), where("status", "==", "requested"));
       onSnapshot(donorRequestsQuery, (snapshot) => {
         const requestedDonations = [];
@@ -517,7 +523,6 @@
           });
         }
       });
-      // For donors: show active requests (from receivers) - optional
       document.getElementById('activeRequestsSection').style.display = 'block';
       const activeRequestsQuery = query(collection(db, "requests"), where("status", "==", "pending"));
       onSnapshot(activeRequestsQuery, (snapshot) => {
@@ -547,7 +552,6 @@
         }
       });
     }
-    // Show available donations (status = "available")
     const donationsQuery = query(collection(db, "donations"), where("status", "==", "available"), orderBy("createdAt", "desc"));
     onSnapshot(donationsQuery, (snapshot) => {
       const donations = [];
@@ -575,7 +579,6 @@
         });
       }
     });
-    // Show user's own pending requests (from requests collection)
     const myRequestsQuery = query(collection(db, "requests"), where("userId", "==", currentUser?.uid), where("status", "==", "pending"));
     onSnapshot(myRequestsQuery, (snapshot) => {
       const myRequests = [];
