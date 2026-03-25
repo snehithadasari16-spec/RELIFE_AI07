@@ -3,20 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#FF6B6B">
   <title>ReLife AI | Smart Community Expiry Rescue</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #1A2C3E; }
+    body { font-family: 'Inter', sans-serif; background: #F5F7FA; color: #1A2C3E; }
     .app-wrapper { max-width: 450px; margin: 0 auto; background: #F5F7FA; min-height: 100vh; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-    .app-header { background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 25%, #45B7D1 50%, #96CEB4 75%, #FFEAA7 100%); color: white; padding: 20px; position: sticky; top: 0; z-index: 100; }
+    .app-header { background: linear-gradient(135deg, #FF6B6B, #4ECDC4); color: white; padding: 20px; position: sticky; top: 0; z-index: 100; }
     .app-header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
     .subtitle { font-size: 0.75rem; margin-top: 5px; opacity: 0.9; }
     .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); max-width: 450px; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 20px 20px; border-top: 1px solid #E5E9F0; z-index: 100; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: #9CA3AF; font-size: 0.7rem; transition: all 0.3s ease; position: relative; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: #9CA3AF; font-size: 0.7rem; transition: 0.3s; position: relative; }
     .nav-item i { font-size: 1.3rem; }
     .nav-item.active { color: #FF6B6B; }
     .badge { position: absolute; top: -6px; right: -6px; background: #FF4757; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-weight: bold; }
@@ -51,6 +50,8 @@
     .form-group { margin-bottom: 16px; }
     input, textarea, select { width: 100%; padding: 12px; border: 1px solid #E5E9F0; border-radius: 12px; font-size: 0.9rem; }
     .back-button { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: white; margin-right: 10px; }
+    .item-image { max-width: 100%; height: auto; border-radius: 12px; margin-bottom: 12px; }
+    .qr-code { width: 200px; height: 200px; margin: 10px auto; display: block; }
     @media (max-width: 450px) { .app-wrapper { width: 100%; } }
   </style>
 </head>
@@ -74,7 +75,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, where, getDocs, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-storage.js";
 
   // Your Firebase configuration (replace with your own if needed)
   const firebaseConfig = {
@@ -90,13 +92,13 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const storage = getStorage(app);
   
   let currentUser = null;
   let currentPage = 'home';
   let userLocation = null;
   let currentChatRoom = null;
   let unsubscribeMessages = null;
-  let unsubscribeUnreadCount = null;
 
   function showToast(message) {
     const toast = document.getElementById('toast');
@@ -135,9 +137,7 @@
     if (unreadCount > 0) {
       badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
       badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
+    } else badge.style.display = 'none';
   }
 
   async function markChatAsRead(chatId) {
@@ -240,7 +240,7 @@
         const otherUser = chat.participants.find(p => p !== currentUser?.uid);
         const otherName = chat.participantNames[otherUser] || 'User';
         return `
-          <div class="chat-list-item" data-chat-id="${chat.chatId}" data-other-name="${otherName}" data-other-id="${otherUser}" data-item-name="${chat.itemName || 'Item'}">
+          <div class="chat-list-item" data-chat-id="${chat.chatId}" data-other-name="${otherName}" data-other-id="${otherUser}" data-item-name="${chat.itemName || 'Item'}" data-donation-id="${chat.matchId}">
             <div class="chat-avatar"><i class="fas fa-user"></i></div>
             <div class="chat-info"><div class="chat-name">${escapeHtml(otherName)}</div><div class="chat-last-message">${escapeHtml(chat.lastMessage || 'No messages yet')}</div></div>
             <div class="chat-time">${chat.lastMessageTime ? new Date(chat.lastMessageTime.toDate()).toLocaleDateString() : 'New'}</div>
@@ -253,18 +253,24 @@
           const otherName = item.dataset.otherName;
           const otherId = item.dataset.otherId;
           const itemName = item.dataset.itemName;
-          openChat(chatId, otherName, otherId, itemName);
+          const donationId = item.dataset.donationId;
+          openChat(chatId, otherName, otherId, itemName, donationId);
         });
       });
     });
   }
 
-  function openChat(chatId, otherName, otherId, itemName) {
-    currentChatRoom = { chatId, otherName, otherId, itemName };
+  async function openChat(chatId, otherName, otherId, itemName, donationId) {
+    currentChatRoom = { chatId, otherName, otherId, itemName, donationId };
+    // Fetch donation details to know status
+    const donationDoc = await getDoc(doc(db, "donations", donationId));
+    const donation = donationDoc.exists() ? donationDoc.data() : null;
+    const status = donation?.status || "unknown";
+
     document.getElementById('appHeader').innerHTML = `
       <button class="back-button" onclick="location.reload()">←</button>
       <h1 style="font-size: 1.2rem;"><i class="fas fa-comments"></i> Chat with ${escapeHtml(otherName)}</h1>
-      <div class="subtitle">About: ${escapeHtml(itemName)}</div>
+      <div class="subtitle">About: ${escapeHtml(itemName)} (${status})</div>
     `;
     const content = document.getElementById('contentArea');
     content.innerHTML = `
@@ -276,6 +282,37 @@
         </div>
       </div>
     `;
+    // Add QR buttons if status is appropriate
+    const chatArea = document.querySelector('.chat-container');
+    const qrButtonsDiv = document.createElement('div');
+    qrButtonsDiv.style.display = 'flex';
+    qrButtonsDiv.style.gap = '8px';
+    qrButtonsDiv.style.padding = '8px 16px';
+    qrButtonsDiv.style.backgroundColor = '#f9fafb';
+    qrButtonsDiv.style.borderRadius = '12px';
+    qrButtonsDiv.style.margin = '8px';
+
+    if (currentUser?.uid !== otherId) {
+      // This is the receiver
+      if (status === 'approved') {
+        qrButtonsDiv.innerHTML = `<button id="showQrBtn" class="btn btn-primary" style="margin:0; background:#4ECDC4;">Show QR Code for Pickup</button>`;
+      } else if (status === 'delivered') {
+        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">✅ Item has been delivered</div>`;
+      } else {
+        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Waiting for donor to approve your request...</div>`;
+      }
+    } else {
+      // This is the donor
+      if (status === 'approved') {
+        qrButtonsDiv.innerHTML = `<button id="scanQrBtn" class="btn btn-primary" style="margin:0;">Scan Receiver's QR Code</button>`;
+      } else if (status === 'delivered') {
+        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Item has been delivered</div>`;
+      } else {
+        qrButtonsDiv.innerHTML = `<div style="background:#E5E9F0; padding:8px; border-radius:12px; text-align:center;">Awaiting receiver's request or action</div>`;
+      }
+    }
+    chatArea.prepend(qrButtonsDiv);
+
     loadMessages(chatId);
     document.getElementById('sendMessageBtn').addEventListener('click', async () => {
       const input = document.getElementById('messageInput');
@@ -285,18 +322,95 @@
     document.getElementById('messageInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') document.getElementById('sendMessageBtn').click();
     });
+
+    if (document.getElementById('showQrBtn')) {
+      document.getElementById('showQrBtn').addEventListener('click', () => showQrModal(donationId));
+    }
+    if (document.getElementById('scanQrBtn')) {
+      document.getElementById('scanQrBtn').addEventListener('click', () => showScanModal(donationId));
+    }
   }
 
-  async function addDonation(name, expiry, availability, urgency, notes) {
+  async function showQrModal(donationId) {
+    const itemDoc = await getDoc(doc(db, "donations", donationId));
+    if (!itemDoc.exists()) { showToast("Item not found"); return; }
+    const item = itemDoc.data();
+    if (item.status !== "approved") { showToast("QR code is not available yet. Wait for donor approval."); return; }
+    if (!item.qrToken) { showToast("QR token missing"); return; }
+    const qrData = JSON.stringify({ donationId, token: item.qrToken });
+    const qrcode = await import("https://cdn.skypack.dev/qrcode");
+    const qrDataUrl = await qrcode.toDataURL(qrData);
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3>Your Pickup QR Code</h3>
+        <img src="${qrDataUrl}" class="qr-code" alt="QR Code">
+        <p>Show this to the donor to complete the rescue.</p>
+        <button class="btn btn-primary" id="closeQrModal">Close</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('closeQrModal').addEventListener('click', () => modal.remove());
+  }
+
+  async function showScanModal(donationId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3>Scan Receiver's QR Code</h3>
+        <div id="qr-reader" style="width:100%;"></div>
+        <button class="btn btn-outline" id="closeScanModal">Cancel</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const scanner = new Html5Qrcode("qr-reader");
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      async (decodedText) => {
+        try {
+          const { donationId: scannedId, token } = JSON.parse(decodedText);
+          if (scannedId !== donationId) { showToast("QR code does not match this item"); return; }
+          const donationRef = doc(db, "donations", donationId);
+          const donationSnap = await getDoc(donationRef);
+          if (!donationSnap.exists()) throw new Error("Item not found");
+          const donation = donationSnap.data();
+          if (donation.status !== "approved") { showToast("Item not in approved state"); return; }
+          if (donation.qrToken !== token) { showToast("Invalid QR token"); return; }
+          await updateDoc(donationRef, { status: "delivered", deliveredAt: serverTimestamp() });
+          showToast("Item delivered! Status updated.");
+          scanner.stop();
+          modal.remove();
+          location.reload(); // Refresh to update UI
+        } catch (err) { showToast("Invalid QR code"); }
+      },
+      (err) => console.warn(err)
+    );
+    document.getElementById('closeScanModal').addEventListener('click', () => {
+      scanner.stop();
+      modal.remove();
+    });
+  }
+
+  async function addDonation(name, expiry, availability, urgency, notes, imageFile) {
     if (!currentUser) return showToast("Please login");
     try {
+      let imageUrl = null;
+      if (imageFile) {
+        const storageRef = ref(storage, `donations/${Date.now()}_${imageFile.name}`);
+        await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
       await addDoc(collection(db, "donations"), {
         name, expiryDate: expiry, availability, urgency, notes,
         donorLocation: userLocation,
         userId: currentUser.uid,
         userEmail: currentUser.email,
         createdAt: serverTimestamp(),
-        status: "available"
+        status: "available",
+        imageUrl: imageUrl
       });
       showToast("✓ Item donated! Others can now request it.");
       return true;
@@ -325,13 +439,33 @@
     try {
       await updateDoc(doc(db, "donations", donationId), { status: "requested", requestedBy: currentUser.uid, requestedAt: serverTimestamp() });
       const chatId = await getOrCreateChatRoom(donorId, donorName, donationId, itemName);
-      await sendMessage(chatId, `Hi! I'm interested in your ${itemName}. When can I pick it up?`);
-      showToast(`✓ Request sent! You can now chat with ${donorName}`);
+      await sendMessage(chatId, `Hi! I'm interested in your ${itemName}. Please approve my request so I can get the QR code.`);
+      showToast(`✓ Request sent! Wait for donor to approve.`);
       document.querySelector('[data-page="chats"]').click();
     } catch(err) { showToast("Error: " + err.message); }
   }
 
+  async function approveRequest(donationId, requesterId, requesterName, itemName) {
+    if (!currentUser) { showToast("Please login first"); return; }
+    try {
+      // Generate a unique token for QR
+      const token = Math.random().toString(36).substring(2, 15);
+      await updateDoc(doc(db, "donations", donationId), {
+        status: "approved",
+        qrToken: token,
+        approvedAt: serverTimestamp()
+      });
+      // Get or create chat room
+      const chatId = await getOrCreateChatRoom(requesterId, requesterName, donationId, itemName);
+      await sendMessage(chatId, `Your request has been approved! You can now view the QR code in our chat.`);
+      showToast(`✓ Request approved! Receiver can now see the QR code.`);
+      location.reload(); // Refresh to update UI
+    } catch(err) { showToast("Error: " + err.message); }
+  }
+
   async function respondToRequest(requestId, requesterId, requesterName, itemName) {
+    // This is for donors responding to a request (not yet a donation)
+    // Not used in this flow but kept for completeness
     if (!currentUser) { showToast("Please login first"); return; }
     if (currentUser.uid === requesterId) { showToast("You cannot respond to your own request"); return; }
     try {
@@ -357,31 +491,33 @@
     const isDonor = !userDonationsSnap.empty;
     if (isDonor) {
       document.getElementById('donorRequestsSection').style.display = 'block';
+      // Show requested items (status = "requested") that belong to donor
       const donorRequestsQuery = query(collection(db, "donations"), where("userId", "==", currentUser.uid), where("status", "==", "requested"));
       onSnapshot(donorRequestsQuery, (snapshot) => {
         const requestedDonations = [];
         snapshot.forEach(doc => requestedDonations.push({ id: doc.id, ...doc.data() }));
         const container = document.getElementById('donorRequestsList');
-        if (requestedDonations.length === 0) container.innerHTML = '<div style="text-align: center; padding: 20px;">No one has requested your items yet.</div>';
+        if (requestedDonations.length === 0) container.innerHTML = '<div style="text-align: center; padding: 20px;">No pending requests.</div>';
         else {
           container.innerHTML = requestedDonations.map(d => `
             <div style="border: 1px solid #E5E9F0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
               <strong>${escapeHtml(d.name)}</strong><br>
               <small>Requested by: ${escapeHtml(d.requestedBy?.split('@')[0] || 'Someone')}</small><br>
-              <button class="btn btn-primary respond-to-request-btn" style="margin-top: 8px; padding: 8px;" data-chat-id="${[currentUser.uid, d.requestedBy].sort().join('_')}" data-other-id="${d.requestedBy}" data-other-name="${escapeHtml(d.requestedBy?.split('@')[0])}" data-item-name="${escapeHtml(d.name)}">Go to Chat</button>
+              <button class="btn btn-primary approve-request-btn" style="margin-top: 8px; padding: 8px;" data-id="${d.id}" data-requester="${d.requestedBy}" data-requester-name="${escapeHtml(d.requestedBy?.split('@')[0])}" data-name="${escapeHtml(d.name)}">Approve & Generate QR</button>
             </div>
           `).join('');
-          document.querySelectorAll('.respond-to-request-btn').forEach(btn => {
+          document.querySelectorAll('.approve-request-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-              const chatId = btn.dataset.chatId;
-              const otherName = btn.dataset.otherName;
-              const otherId = btn.dataset.otherId;
-              const itemName = btn.dataset.itemName;
-              openChat(chatId, otherName, otherId, itemName);
+              const donationId = btn.dataset.id;
+              const requesterId = btn.dataset.requester;
+              const requesterName = btn.dataset.requesterName;
+              const itemName = btn.dataset.name;
+              approveRequest(donationId, requesterId, requesterName, itemName);
             });
           });
         }
       });
+      // For donors: show active requests (from receivers) - optional
       document.getElementById('activeRequestsSection').style.display = 'block';
       const activeRequestsQuery = query(collection(db, "requests"), where("status", "==", "pending"));
       onSnapshot(activeRequestsQuery, (snapshot) => {
@@ -411,6 +547,7 @@
         }
       });
     }
+    // Show available donations (status = "available")
     const donationsQuery = query(collection(db, "donations"), where("status", "==", "available"), orderBy("createdAt", "desc"));
     onSnapshot(donationsQuery, (snapshot) => {
       const donations = [];
@@ -420,6 +557,7 @@
       else {
         container.innerHTML = donations.map(d => `
           <div style="border: 1px solid #E5E9F0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+            ${d.imageUrl ? `<img src="${d.imageUrl}" class="item-image" alt="Item">` : ''}
             <strong>${escapeHtml(d.name)}</strong><br>
             <small>Expires: ${formatDate(d.expiryDate)} | ${d.availability}</small>
             ${d.urgency === 'high' ? '<div style="color: #DC2626; font-size: 0.7rem; margin-top: 4px;">⚠️ Urgent</div>' : ''}
@@ -437,6 +575,7 @@
         });
       }
     });
+    // Show user's own pending requests (from requests collection)
     const myRequestsQuery = query(collection(db, "requests"), where("userId", "==", currentUser?.uid), where("status", "==", "pending"));
     onSnapshot(myRequestsQuery, (snapshot) => {
       const myRequests = [];
@@ -467,17 +606,20 @@
         <div class="form-group"><label>Expiry Date</label><input type="date" id="expiryDate"></div>
         <div class="form-group"><label>Urgency</label><select id="urgency"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
         <div class="form-group"><label>Availability</label><select id="availability"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+        <div class="form-group"><label>Photo (optional)</label><input type="file" id="itemImage" accept="image/*"></div>
         <div class="form-group"><label>Notes</label><textarea id="notes" placeholder="Any instructions..."></textarea></div>
         <button class="btn btn-primary" id="submitDonationBtn">Donate</button>
       </div>
     `;
     document.getElementById('submitDonationBtn').addEventListener('click', async () => {
+      const imageFile = document.getElementById('itemImage').files[0];
       await addDonation(
         document.getElementById('itemName').value,
         document.getElementById('expiryDate').value,
         document.getElementById('availability').value,
         document.getElementById('urgency').value,
-        document.getElementById('notes').value
+        document.getElementById('notes').value,
+        imageFile
       );
       document.querySelector('[data-page="home"]').click();
     });
