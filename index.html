@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#FF6B6B">
+  <title>ReLife AI | Smart Community Expiry Rescue</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #1A2C3E; }
+    .app-wrapper { max-width: 450px; margin: 0 auto; background: #F5F7FA; min-height: 100vh; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    .app-header { background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 25%, #45B7D1 50%, #96CEB4 75%, #FFEAA7 100%); color: white; padding: 20px; position: sticky; top: 0; z-index: 100; }
+    .app-header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+    .subtitle { font-size: 0.75rem; margin-top: 5px; opacity: 0.9; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); max-width: 450px; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 20px 20px; border-top: 1px solid #E5E9F0; z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; color: #9CA3AF; font-size: 0.7rem; transition: all 0.3s ease; position: relative; }
+    .nav-item i { font-size: 1.3rem; }
+    .nav-item.active { color: #FF6B6B; }
+    .badge { position: absolute; top: -6px; right: -6px; background: #FF4757; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .content-area { padding: 20px; padding-bottom: 80px; margin-bottom: 60px; }
+    .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .chat-container { display: flex; flex-direction: column; height: calc(100vh - 200px); background: #F5F7FA; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .message { max-width: 80%; padding: 10px 14px; border-radius: 18px; position: relative; word-wrap: break-word; }
+    .message-sent { background: linear-gradient(135deg, #FF6B6B, #FF4757); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .message-received { background: #E5E9F0; color: #1A2C3E; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .message-time { font-size: 0.65rem; margin-top: 4px; opacity: 0.7; }
+    .chat-input-area { padding: 16px; background: white; border-top: 1px solid #E5E9F0; display: flex; gap: 10px; }
+    .chat-input-area input { flex: 1; padding: 12px; border: 1px solid #E5E9F0; border-radius: 25px; outline: none; }
+    .chat-input-area button { width: auto; padding: 12px 20px; background: linear-gradient(135deg, #FF6B6B, #FF4757); color: white; border: none; border-radius: 25px; cursor: pointer; }
+    .chat-list-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #E5E9F0; cursor: pointer; transition: background 0.2s; }
+    .chat-list-item:hover { background: #F9FAFB; }
+    .chat-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #FF6B6B, #FF4757); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+    .chat-info { flex: 1; }
+    .chat-name { font-weight: 600; margin-bottom: 4px; }
+    .chat-last-message { font-size: 0.75rem; color: #6B7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-time { font-size: 0.7rem; color: #9CA3AF; }
+    .btn { padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; width: 100%; }
+    .btn-primary { background: linear-gradient(135deg, #FF6B6B, #FF4757); color: white; }
+    .btn-outline { background: white; border: 1px solid #E5E9F0; color: #FF6B6B; }
+    .location-banner { background: #F3F4F6; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: 0.3s; }
+    .modal.active { visibility: visible; opacity: 1; }
+    .modal-content { background: white; border-radius: 24px; padding: 24px; max-width: 90%; width: 320px; text-align: center; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1F2937; color: white; padding: 12px 20px; border-radius: 40px; font-size: 0.85rem; z-index: 1000; transition: 0.3s; opacity: 0; pointer-events: none; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .form-group { margin-bottom: 16px; }
+    input, textarea, select { width: 100%; padding: 12px; border: 1px solid #E5E9F0; border-radius: 12px; font-size: 0.9rem; }
+    .back-button { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: white; margin-right: 10px; }
+    @media (max-width: 450px) { .app-wrapper { width: 100%; } }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="app-header" id="appHeader">
+    <h1><i class="fas fa-leaf"></i> ReLife AI</h1>
+    <div class="subtitle">Smart Community Expiry Rescue | Chat & Connect</div>
+  </div>
+  <div class="content-area" id="contentArea"></div>
+  <div class="bottom-nav">
+    <button class="nav-item active" data-page="home"><i class="fas fa-home"></i><span>Home</span></button>
+    <button class="nav-item" data-page="donate"><i class="fas fa-gift"></i><span>Donate</span></button>
+    <button class="nav-item" data-page="request"><i class="fas fa-hand-holding-heart"></i><span>Request</span></button>
+    <button class="nav-item" data-page="chats"><i class="fas fa-comments"></i><span>Chats</span><span id="unreadBadge" class="badge" style="display: none;">0</span></button>
+    <button class="nav-item" data-page="profile"><i class="fas fa-user"></i><span>Profile</span></button>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, where, getDocs, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+  // Your Firebase configuration (replace with your own if needed)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlBfC5JkFTsix9MyhKaum8t9TZa8VtVxU",
+    authDomain: "relife-ai.firebaseapp.com",
+    projectId: "relife-ai",
+    storageBucket: "relife-ai.firebasestorage.app",
+    messagingSenderId: "414251097198",
+    appId: "1:414251097198:web:d1b9c5fc16972c6d881a7f",
+    measurementId: "G-04XVCRLRVJ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  
+  let currentUser = null;
+  let currentPage = 'home';
+  let userLocation = null;
+  let currentChatRoom = null;
+  let unsubscribeMessages = null;
+  let unsubscribeUnreadCount = null;
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  function enableLocation() {
+    if (!navigator.geolocation) { showToast("Geolocation not supported"); return; }
+    navigator.geolocation.getCurrentPosition(
+      (position) => { userLocation = { lat: position.coords.latitude, lng: position.coords.longitude }; showToast("📍 Location enabled!"); },
+      () => showToast("Please enable location")
+    );
+  }
+
+  async function updateUnreadBadge() {
+    if (!currentUser) return;
+    const chatsQuery = query(collection(db, "chats"));
+    const snapshot = await getDocs(chatsQuery);
+    let unreadCount = 0;
+    for (const docSnap of snapshot.docs) {
+      const chat = docSnap.data();
+      if (chat.participants.includes(currentUser.uid)) {
+        const messagesQuery = query(
+          collection(db, "messages"),
+          where("chatId", "==", chat.chatId),
+          where("read", "==", false),
+          where("senderId", "!=", currentUser.uid)
+        );
+        const msgSnap = await getDocs(messagesQuery);
+        unreadCount += msgSnap.size;
+      }
+    }
+    const badge = document.getElementById('unreadBadge');
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  async function markChatAsRead(chatId) {
+    if (!currentUser) return;
+    const messagesQuery = query(
+      collection(db, "messages"),
+      where("chatId", "==", chatId),
+      where("read", "==", false),
+      where("senderId", "!=", currentUser.uid)
+    );
+    const snapshot = await getDocs(messagesQuery);
+    snapshot.forEach(async (docSnap) => {
+      await updateDoc(doc(db, "messages", docSnap.id), { read: true });
+    });
+  }
+
+  async function getOrCreateChatRoom(otherUserId, otherUserName, matchId, itemName) {
+    if (!currentUser) return null;
+    const chatId = [currentUser.uid, otherUserId].sort().join('_');
+    const chatsQuery = query(collection(db, "chats"), where("chatId", "==", chatId));
+    const chatSnapshot = await getDocs(chatsQuery);
+    if (chatSnapshot.empty) {
+      await addDoc(collection(db, "chats"), {
+        chatId: chatId,
+        participants: [currentUser.uid, otherUserId],
+        participantNames: {
+          [currentUser.uid]: currentUser.email.split('@')[0],
+          [otherUserId]: otherUserName
+        },
+        matchId: matchId,
+        itemName: itemName,
+        lastMessage: "Chat started",
+        lastMessageTime: serverTimestamp(),
+        createdAt: serverTimestamp()
+      });
+    }
+    return chatId;
+  }
+
+  async function sendMessage(chatId, message) {
+    if (!message.trim() || !currentUser) return;
+    await addDoc(collection(db, "messages"), {
+      chatId: chatId,
+      senderId: currentUser.uid,
+      senderName: currentUser.email.split('@')[0],
+      message: message.trim(),
+      timestamp: serverTimestamp(),
+      read: false
+    });
+    const chatsQuery = query(collection(db, "chats"), where("chatId", "==", chatId));
+    const chatSnapshot = await getDocs(chatsQuery);
+    chatSnapshot.forEach(async (docSnap) => {
+      await updateDoc(docSnap.ref, {
+        lastMessage: message.trim(),
+        lastMessageTime: serverTimestamp()
+      });
+    });
+    updateUnreadBadge();
+  }
+
+  function loadMessages(chatId) {
+    if (unsubscribeMessages) unsubscribeMessages();
+    const messagesQuery = query(collection(db, "messages"), where("chatId", "==", chatId), orderBy("timestamp", "asc"));
+    unsubscribeMessages = onSnapshot(messagesQuery, async (snapshot) => {
+      const messages = [];
+      snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+      renderChatMessages(messages);
+      await markChatAsRead(chatId);
+    });
+  }
+
+  function renderChatMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    container.innerHTML = messages.map(msg => `
+      <div class="message ${msg.senderId === currentUser?.uid ? 'message-sent' : 'message-received'}">
+        <div>${escapeHtml(msg.message)}</div>
+        <div class="message-time">${msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now'}</div>
+      </div>
+    `).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function renderChatList() {
+    const content = document.getElementById('contentArea');
+    content.innerHTML = `<div class="card"><div class="card-title"><i class="fas fa-comments"></i> Your Conversations</div><div id="chatListContainer">Loading chats...</div></div>`;
+    const chatsQuery = query(collection(db, "chats"), orderBy("lastMessageTime", "desc"));
+    onSnapshot(chatsQuery, (snapshot) => {
+      const chats = [];
+      snapshot.forEach(doc => {
+        const chat = doc.data();
+        if (chat.participants.includes(currentUser?.uid)) chats.push({ id: doc.id, ...chat });
+      });
+      const container = document.getElementById('chatListContainer');
+      if (chats.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px;"><i class="fas fa-comments" style="font-size: 3rem; color: #9CA3AF;"></i><p>No conversations yet. Start by matching with someone!</p></div>';
+        return;
+      }
+      container.innerHTML = chats.map(chat => {
+        const otherUser = chat.participants.find(p => p !== currentUser?.uid);
+        const otherName = chat.participantNames[otherUser] || 'User';
+        return `
+          <div class="chat-list-item" data-chat-id="${chat.chatId}" data-other-name="${otherName}" data-other-id="${otherUser}" data-item-name="${chat.itemName || 'Item'}">
+            <div class="chat-avatar"><i class="fas fa-user"></i></div>
+            <div class="chat-info"><div class="chat-name">${escapeHtml(otherName)}</div><div class="chat-last-message">${escapeHtml(chat.lastMessage || 'No messages yet')}</div></div>
+            <div class="chat-time">${chat.lastMessageTime ? new Date(chat.lastMessageTime.toDate()).toLocaleDateString() : 'New'}</div>
+          </div>
+        `;
+      }).join('');
+      document.querySelectorAll('.chat-list-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const chatId = item.dataset.chatId;
+          const otherName = item.dataset.otherName;
+          const otherId = item.dataset.otherId;
+          const itemName = item.dataset.itemName;
+          openChat(chatId, otherName, otherId, itemName);
+        });
+      });
+    });
+  }
+
+  function openChat(chatId, otherName, otherId, itemName) {
+    currentChatRoom = { chatId, otherName, otherId, itemName };
+    document.getElementById('appHeader').innerHTML = `
+      <button class="back-button" onclick="location.reload()">←</button>
+      <h1 style="font-size: 1.2rem;"><i class="fas fa-comments"></i> Chat with ${escapeHtml(otherName)}</h1>
+      <div class="subtitle">About: ${escapeHtml(itemName)}</div>
+    `;
+    const content = document.getElementById('contentArea');
+    content.innerHTML = `
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-area">
+          <input type="text" id="messageInput" placeholder="Type a message...">
+          <button id="sendMessageBtn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    `;
+    loadMessages(chatId);
+    document.getElementById('sendMessageBtn').addEventListener('click', async () => {
+      const input = document.getElementById('messageInput');
+      await sendMessage(chatId, input.value);
+      input.value = '';
+    });
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('sendMessageBtn').click();
+    });
+  }
+
+  async function addDonation(name, expiry, availability, urgency, notes) {
+    if (!currentUser) return showToast("Please login");
+    try {
+      await addDoc(collection(db, "donations"), {
+        name, expiryDate: expiry, availability, urgency, notes,
+        donorLocation: userLocation,
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        createdAt: serverTimestamp(),
+        status: "available"
+      });
+      showToast("✓ Item donated! Others can now request it.");
+      return true;
+    } catch(err) { showToast("Error: " + err.message); return false; }
+  }
+
+  async function addRequest(name, urgency, availability, reason, deadline) {
+    if (!currentUser) return showToast("Please login");
+    try {
+      await addDoc(collection(db, "requests"), {
+        name, urgency, availability, reason, deadline,
+        requesterLocation: userLocation,
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        createdAt: serverTimestamp(),
+        status: "pending"
+      });
+      showToast("✓ Request posted! Donors can now help you.");
+      return true;
+    } catch(err) { showToast("Error: " + err.message); return false; }
+  }
+
+  async function requestItem(donationId, donorId, donorName, itemName) {
+    if (!currentUser) { showToast("Please login first"); return; }
+    if (currentUser.uid === donorId) { showToast("You cannot request your own item"); return; }
+    try {
+      await updateDoc(doc(db, "donations", donationId), { status: "requested", requestedBy: currentUser.uid, requestedAt: serverTimestamp() });
+      const chatId = await getOrCreateChatRoom(donorId, donorName, donationId, itemName);
+      await sendMessage(chatId, `Hi! I'm interested in your ${itemName}. When can I pick it up?`);
+      showToast(`✓ Request sent! You can now chat with ${donorName}`);
+      document.querySelector('[data-page="chats"]').click();
+    } catch(err) { showToast("Error: " + err.message); }
+  }
+
+  async function respondToRequest(requestId, requesterId, requesterName, itemName) {
+    if (!currentUser) { showToast("Please login first"); return; }
+    if (currentUser.uid === requesterId) { showToast("You cannot respond to your own request"); return; }
+    try {
+      await updateDoc(doc(db, "requests", requestId), { status: "in_progress", respondedBy: currentUser.uid, respondedAt: serverTimestamp() });
+      const chatId = await getOrCreateChatRoom(requesterId, requesterName, requestId, itemName);
+      await sendMessage(chatId, `Hi! I can help with your request for ${itemName}. Let's coordinate.`);
+      showToast(`✓ You responded! Chat with ${requesterName} started.`);
+      document.querySelector('[data-page="chats"]').click();
+    } catch(err) { showToast("Error: " + err.message); }
+  }
+
+  async function renderHomePage() {
+    const content = document.getElementById('contentArea');
+    content.innerHTML = `
+      ${!userLocation ? `<div class="location-banner"><div><i class="fas fa-map-marker-alt"></i> Enable location for better matches</div><button class="btn btn-primary" id="enableLocationBtn" style="width: auto; padding: 8px 16px;">Enable</button></div>` : `<div class="location-banner"><div><i class="fas fa-check-circle" style="color: #2E7D32;"></i> Location active</div></div>`}
+      <div id="donorRequestsSection" style="display: none;"><div class="card"><div class="card-title"><i class="fas fa-bell"></i> Requests for Your Items</div><div id="donorRequestsList">Loading...</div></div></div>
+      <div id="activeRequestsSection" style="display: none;"><div class="card"><div class="card-title"><i class="fas fa-hands-helping"></i> Help Someone in Need</div><div id="activeRequestsList">Loading...</div></div></div>
+      <div id="availableDonationsSection"><div class="card"><div class="card-title"><i class="fas fa-gift"></i> Available Donations</div><div id="donationsList">Loading...</div></div></div>
+      <div id="myRequestsSection" style="display: none;"><div class="card"><div class="card-title"><i class="fas fa-list-ul"></i> My Pending Requests</div><div id="myRequestsList">Loading...</div></div></div>
+    `;
+    const userDonationsQuery = query(collection(db, "donations"), where("userId", "==", currentUser?.uid));
+    const userDonationsSnap = await getDocs(userDonationsQuery);
+    const isDonor = !userDonationsSnap.empty;
+    if (isDonor) {
+      document.getElementById('donorRequestsSection').style.display = 'block';
+      const donorRequestsQuery = query(collection(db, "donations"), where("userId", "==", currentUser.uid), where("status", "==", "requested"));
+      onSnapshot(donorRequestsQuery, (snapshot) => {
+        const requestedDonations = [];
+        snapshot.forEach(doc => requestedDonations.push({ id: doc.id, ...doc.data() }));
+        const container = document.getElementById('donorRequestsList');
+        if (requestedDonations.length === 0) container.innerHTML = '<div style="text-align: center; padding: 20px;">No one has requested your items yet.</div>';
+        else {
+          container.innerHTML = requestedDonations.map(d => `
+            <div style="border: 1px solid #E5E9F0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+              <strong>${escapeHtml(d.name)}</strong><br>
+              <small>Requested by: ${escapeHtml(d.requestedBy?.split('@')[0] || 'Someone')}</small><br>
+              <button class="btn btn-primary respond-to-request-btn" style="margin-top: 8px; padding: 8px;" data-chat-id="${[currentUser.uid, d.requestedBy].sort().join('_')}" data-other-id="${d.requestedBy}" data-other-name="${escapeHtml(d.requestedBy?.split('@')[0])}" data-item-name="${escapeHtml(d.name)}">Go to Chat</button>
+            </div>
+          `).join('');
+          document.querySelectorAll('.respond-to-request-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const chatId = btn.dataset.chatId;
+              const otherName = btn.dataset.otherName;
+              const otherId = btn.dataset.otherId;
+              const itemName = btn.dataset.itemName;
+              openChat(chatId, otherName, otherId, itemName);
+            });
+          });
+        }
+      });
+      document.getElementById('activeRequestsSection').style.display = 'block';
+      const activeRequestsQuery = query(collection(db, "requests"), where("status", "==", "pending"));
+      onSnapshot(activeRequestsQuery, (snapshot) => {
+        const requests = [];
+        snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
+        const container = document.getElementById('activeRequestsList');
+        if (requests.length === 0) container.innerHTML = '<div style="text-align: center; padding: 20px;">No active requests at the moment.</div>';
+        else {
+          container.innerHTML = requests.map(r => `
+            <div style="border: 1px solid #E5E9F0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+              <strong>${escapeHtml(r.name)}</strong><br>
+              <small>Urgency: ${r.urgency} | Need by: ${r.deadline || 'ASAP'}</small>
+              ${r.reason ? `<small><br>💬 "${escapeHtml(r.reason)}"</small>` : ''}
+              ${r.urgency === 'high' ? '<div style="color: #DC2626; font-size: 0.7rem; margin-top: 4px;">🔴 Urgent Need</div>' : ''}
+              <button class="btn btn-primary help-request-btn" style="margin-top: 8px; padding: 8px;" data-id="${r.id}" data-requester="${r.userId}" data-requester-name="${escapeHtml(r.userEmail?.split('@')[0])}" data-name="${escapeHtml(r.name)}">Help</button>
+            </div>
+          `).join('');
+          document.querySelectorAll('.help-request-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const requestId = btn.dataset.id;
+              const requesterId = btn.dataset.requester;
+              const requesterName = btn.dataset.requesterName;
+              const itemName = btn.dataset.name;
+              respondToRequest(requestId, requesterId, requesterName, itemName);
+            });
+          });
+        }
+      });
+    }
+    const donationsQuery = query(collection(db, "donations"), where("status", "==", "available"), orderBy("createdAt", "desc"));
+    onSnapshot(donationsQuery, (snapshot) => {
+      const donations = [];
+      snapshot.forEach(doc => donations.push({ id: doc.id, ...doc.data() }));
+      const container = document.getElementById('donationsList');
+      if (donations.length === 0) container.innerHTML = '<div style="text-align: center; padding: 20px;">No donations available</div>';
+      else {
+        container.innerHTML = donations.map(d => `
+          <div style="border: 1px solid #E5E9F0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+            <strong>${escapeHtml(d.name)}</strong><br>
+            <small>Expires: ${formatDate(d.expiryDate)} | ${d.availability}</small>
+            ${d.urgency === 'high' ? '<div style="color: #DC2626; font-size: 0.7rem; margin-top: 4px;">⚠️ Urgent</div>' : ''}
+            ${currentUser && d.userId !== currentUser.uid ? `<button class="btn btn-primary request-item-btn" style="margin-top: 8px; padding: 8px;" data-id="${d.id}" data-donor="${d.userId}" data-donor-name="${escapeHtml(d.userEmail?.split('@')[0])}" data-name="${escapeHtml(d.name)}"><i class="fas fa-comment"></i> Request & Chat</button>` : ''}
+          </div>
+        `).join('');
+        document.querySelectorAll('.request-item-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const donationId = btn.dataset.id;
+            const donorId = btn.dataset.donor;
+            const donorName = btn.dataset.donorName;
+            const itemName = btn.dataset.name;
+            requestItem(donationId, donorId, donorName, itemName);
+          });
+        });
+      }
+    });
+    const myRequestsQuery = query(collection(db, "requests"), where("userId", "==", currentUser?.uid), where("status", "==", "pending"));
+    onSnapshot(myRequestsQuery, (snapshot) => {
+      const myRequests = [];
+      snapshot.forEach(doc => myRequests.push({ id: doc.id, ...doc.data() }));
+      const container = document.getElementById('myRequestsList');
+      const section = document.getElementById('myRequestsSection');
+      if (myRequests.length > 0) {
+        section.style.display = 'block';
+        container.innerHTML = myRequests.map(r => `
+          <div style="border: 1px solid #E5E9F0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+            <strong>${escapeHtml(r.name)}</strong><br>
+            <small>Urgency: ${r.urgency} | Need by: ${r.deadline || 'ASAP'}</small>
+            ${r.reason ? `<small><br>💬 "${escapeHtml(r.reason)}"</small>` : ''}
+            <div style="color: #FFB300; font-size: 0.7rem; margin-top: 4px;">⏳ Waiting for a donor...</div>
+          </div>
+        `).join('');
+      } else section.style.display = 'none';
+    });
+    document.getElementById('enableLocationBtn')?.addEventListener('click', enableLocation);
+  }
+
+  function renderDonatePage() {
+    const content = document.getElementById('contentArea');
+    content.innerHTML = `
+      <div class="card">
+        <div class="card-title"><i class="fas fa-gift"></i> Donate an Item</div>
+        <div class="form-group"><label>Item Name</label><input type="text" id="itemName" placeholder="e.g., Fresh Milk, Bread"></div>
+        <div class="form-group"><label>Expiry Date</label><input type="date" id="expiryDate"></div>
+        <div class="form-group"><label>Urgency</label><select id="urgency"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+        <div class="form-group"><label>Availability</label><select id="availability"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+        <div class="form-group"><label>Notes</label><textarea id="notes" placeholder="Any instructions..."></textarea></div>
+        <button class="btn btn-primary" id="submitDonationBtn">Donate</button>
+      </div>
+    `;
+    document.getElementById('submitDonationBtn').addEventListener('click', async () => {
+      await addDonation(
+        document.getElementById('itemName').value,
+        document.getElementById('expiryDate').value,
+        document.getElementById('availability').value,
+        document.getElementById('urgency').value,
+        document.getElementById('notes').value
+      );
+      document.querySelector('[data-page="home"]').click();
+    });
+  }
+
+  function renderRequestPage() {
+    const content = document.getElementById('contentArea');
+    content.innerHTML = `
+      <div class="card">
+        <div class="card-title"><i class="fas fa-hand-holding-heart"></i> Request an Item</div>
+        <div class="form-group"><label>What do you need?</label><input type="text" id="requestName" placeholder="e.g., Milk, Medicine"></div>
+        <div class="form-group"><label>Urgency</label><select id="urgencyLevel"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+        <div class="form-group"><label>Availability</label><select id="pickupAvailability"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+        <div class="form-group"><label>Reason (Optional)</label><textarea id="reason" placeholder="Why do you need this?"></textarea></div>
+        <div class="form-group"><label>Need by date</label><input type="date" id="deadline"></div>
+        <button class="btn btn-primary" id="submitRequestBtn">Post Request</button>
+      </div>
+    `;
+    document.getElementById('submitRequestBtn').addEventListener('click', async () => {
+      await addRequest(
+        document.getElementById('requestName').value,
+        document.getElementById('urgencyLevel').value,
+        document.getElementById('pickupAvailability').value,
+        document.getElementById('reason').value,
+        document.getElementById('deadline').value
+      );
+      document.querySelector('[data-page="home"]').click();
+    });
+  }
+
+  function renderProfilePage() {
+    if (!currentUser) return showToast("Please login");
+    const content = document.getElementById('contentArea');
+    content.innerHTML = `
+      <div class="card">
+        <div class="card-title"><i class="fas fa-user-circle"></i> My Profile</div>
+        <div style="text-align: center;">
+          <i class="fas fa-user-circle" style="font-size: 4rem; color: #FF6B6B;"></i>
+          <h3>${escapeHtml(currentUser.email)}</h3>
+        </div>
+        ${userLocation ? '<div><i class="fas fa-check-circle" style="color: #2E7D32;"></i> Location enabled</div>' : '<button class="btn btn-primary" id="enableProfileLocation">Enable Location</button>'}
+        <button class="btn btn-outline" id="logoutBtn" style="margin-top: 16px;">Logout</button>
+      </div>
+    `;
+    document.getElementById('enableProfileLocation')?.addEventListener('click', enableLocation);
+    document.getElementById('logoutBtn')?.addEventListener('click', () => signOut(auth));
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return 'Soon';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderCurrentPage() {
+    switch(currentPage) {
+      case 'home': renderHomePage(); break;
+      case 'donate': renderDonatePage(); break;
+      case 'request': renderRequestPage(); break;
+      case 'chats': renderChatList(); break;
+      case 'profile': renderProfilePage(); break;
+    }
+  }
+
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPage = btn.dataset.page;
+      document.getElementById('appHeader').innerHTML = `<h1><i class="fas fa-leaf"></i> ReLife AI</h1><div class="subtitle">Smart Community Expiry Rescue | Chat & Connect</div>`;
+      renderCurrentPage();
+    });
+  });
+
+  setInterval(updateUnreadBadge, 5000);
+
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (!user) {
+      const loginHtml = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000;" id="loginModal">
+          <div style="background: white; border-radius: 24px; padding: 24px; width: 90%; max-width: 320px;">
+            <h3 style="text-align: center;">Welcome to ReLife AI</h3>
+            <input type="email" id="loginEmail" placeholder="Email" style="width: 100%; padding: 12px; margin: 12px 0; border: 1px solid #E5E9F0; border-radius: 12px;">
+            <input type="password" id="loginPassword" placeholder="Password" style="width: 100%; padding: 12px; margin: 12px 0; border: 1px solid #E5E9F0; border-radius: 12px;">
+            <button id="loginBtn" class="btn btn-primary" style="margin-bottom: 8px;">Login</button>
+            <button id="signupBtn" class="btn btn-outline">Sign Up</button>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', loginHtml);
+      document.getElementById('loginBtn').addEventListener('click', async () => {
+        try {
+          await signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+          document.getElementById('loginModal').remove();
+          showToast("Welcome back!");
+        } catch(err) { showToast(err.message); }
+      });
+      document.getElementById('signupBtn').addEventListener('click', async () => {
+        try {
+          await createUserWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+          document.getElementById('loginModal').remove();
+          showToast("Account created!");
+        } catch(err) { showToast(err.message); }
+      });
+    } else {
+      renderCurrentPage();
+      updateUnreadBadge();
+    }
+  });
+</script>
+</body>
+</html>
